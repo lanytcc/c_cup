@@ -7,6 +7,7 @@ if (!(Test-Path $env:USERPROFILE\scoop)) {
 
 # Install Scoop packages
 if (!(Test-Path $env:USERPROFILE\scoop\apps\miniconda3)) {
+    scoop bucket add extras
     scoop install miniconda3
 }
 
