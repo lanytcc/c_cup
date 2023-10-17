@@ -5,7 +5,7 @@
 
 ### Requirements
 1. windows 10+
-2. cuda 12.1
+2. cuda 12.1 (you can use cpu version)
 
 ### Install 
 ```powershell
