@@ -9,6 +9,7 @@ if (!(Test-Path $env:USERPROFILE\scoop)) {
 if (!(Test-Path $env:USERPROFILE\scoop\apps\miniconda3)) {
     scoop bucket add extras
     scoop install miniconda3
+    conda init powershell
 }
 
 # Install Conda packages
