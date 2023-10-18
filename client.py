@@ -96,8 +96,10 @@ def receive_images(client, canvas, processed_canvas):
                 label = f'{model.names[int(cls)]} {conf:.2f}'
                 plot_one_box(xyxy, processed_img, label=label, line_thickness=3)
 
+            
             # 图片保存到文件夹
-            cv2.imwrite(os.path.join(file_path, f"{time.time()}.jpg"), processed_img)
+            if is_write:
+                cv2.imwrite(os.path.join(file_path, f"{time.time()}.jpg"), processed_img)
 
             processed_img = Image.fromarray(processed_img)
             processed_imgtk = ImageTk.PhotoImage(image=processed_img)
@@ -161,8 +163,17 @@ def main():
     def open_file():
         if not file_path or not os.path.exists(file_path):
             return
-        disconnect()
+        # disconnect()
         os.system(f"start explorer {file_path}")
+
+    def write():
+        global is_write
+        if is_write:
+            is_write = False
+            write_button.config(text="开始保存")
+        else:
+            is_write = True
+            write_button.config(text="停止保存")
     
     # 创建 Tkinter 界面
     root = tk.Tk()
@@ -190,6 +201,12 @@ def main():
     # 点击按钮断开连接并打开保存的图片文件夹
     open_button = ttk.Button(ip_frame, text="打开文件夹", command=open_file)
     open_button.grid(column=4, row=0, padx=5, pady=5)
+
+    # 点击按钮开始或停止保存图片
+    global is_write
+    is_write = False
+    write_button = ttk.Button(ip_frame, text="开始保存", command=write)
+    write_button.grid(column=5, row=0, padx=5, pady=5)
 
     # 创建显示摄像头图像的画布
     canvas = tk.Canvas(root, width=640, height=480)
