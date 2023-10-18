@@ -1,5 +1,7 @@
 import torch
 import socket
+import time
+import os
 import struct
 import cv2
 import numpy as np
@@ -42,9 +44,20 @@ class Client:
 
 def receive_images(client, canvas, processed_canvas):
     try:
+        #检测photo文件夹是否存在，不存在则创建
+        if not os.path.exists("photo"):
+            os.mkdir("photo")
+
+        # 创建一个当前时间命名的文件夹
+        global file_path
+        file_path = os.path.join("photo", time.strftime("%Y%m%d%H%M%S", time.localtime()))
+        os.mkdir(file_path)
+
+        # 初始化模型
         device = select_device('0' if torch.cuda.is_available() else 'cpu')
-        model = attempt_load('weights/yolo5s.pt', map_location=device)
+        model = attempt_load('weights/last.pt', map_location=device)
         model.to(device)
+        # 如果使用GPU，就开启半精度浮点数加速
         if device.type != 'cpu':
             model(torch.zeros(1, 3, 640, 640).to(device).type_as(next(model.parameters())))
 
@@ -60,6 +73,7 @@ def receive_images(client, canvas, processed_canvas):
             # 调整图像通道顺序为CHW
             img_chw = img.transpose(2, 0, 1)
 
+            # 将图像转换为Tensor
             img_tensor = torch.from_numpy(img_chw).unsqueeze(0).float().to(device) / 255.0
             pred = model(img_tensor)[0]
             pred = non_max_suppression(pred, 0.25, 0.45)
@@ -68,18 +82,22 @@ def receive_images(client, canvas, processed_canvas):
                 if len(det):
                     det[:, :4] = scale_coords(img_tensor.shape[2:], det[:, :4], img.shape).round()
             
-            img0 = img.copy()
+            processed_img = img.copy()
 
+            # 将图像转换为PIL格式
             img = Image.fromarray(img)
             imgtk = ImageTk.PhotoImage(image=img)
             canvas.create_image(0, 0, anchor=tk.NW, image=imgtk)
             canvas.image = imgtk
             canvas.update()
 
-            processed_img = img0
+            # 绘制检测框
             for *xyxy, conf, cls in det:
                 label = f'{model.names[int(cls)]} {conf:.2f}'
                 plot_one_box(xyxy, processed_img, label=label, line_thickness=3)
+
+            # 图片保存到文件夹
+            cv2.imwrite(os.path.join(file_path, f"{time.time()}.jpg"), processed_img)
 
             processed_img = Image.fromarray(processed_img)
             processed_imgtk = ImageTk.PhotoImage(image=processed_img)
@@ -140,6 +158,11 @@ def main():
         disconnect()
         root.destroy()
 
+    def open_file():
+        if not file_path or not os.path.exists(file_path):
+            return
+        os.system(f"start explorer {file_path}")
+    
     # 创建 Tkinter 界面
     root = tk.Tk()
     root.title("Remote Control")
@@ -151,22 +174,25 @@ def main():
     ip_frame=tk.Frame(root)
     ip_frame.grid(column=0,row=0, columnspan=3)
 
+    # 创建输入 IP 地址的标签和输入框
     ip_label = ttk.Label(ip_frame, text="IP:")
     ip_label.grid(column=0, row=0, padx=5, pady=5)
-
     ip_entry = ttk.Entry(ip_frame)
     ip_entry.grid(column=1, row=0, padx=5, pady=5)
 
+    # 创建连接和断开连接按钮
     connect_button = ttk.Button(ip_frame, text="连接", command=connect)
     connect_button.grid(column=2, row=0, padx=5, pady=5)
-
     disconnect_button = ttk.Button(ip_frame, text="断开连接", command=disconnect)
     disconnect_button.grid(column=3, row=0, padx=5, pady=5)
+
+    # 点击按钮打开保存的图片文件夹
+    open_button = ttk.Button(ip_frame, text="打开文件夹", command=open_file)
+    open_button.grid(column=4, row=0, padx=5, pady=5)
 
     # 创建显示摄像头图像的画布
     canvas = tk.Canvas(root, width=640, height=480)
     canvas.grid(column=0, row=1, columnspan=3, padx=5, pady=5)
-
     processed_canvas = tk.Canvas(root, width=640, height=480)
     processed_canvas.grid(column=3, row=1, padx=5, pady=5)
 
