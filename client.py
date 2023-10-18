@@ -161,6 +161,7 @@ def main():
     def open_file():
         if not file_path or not os.path.exists(file_path):
             return
+        disconnect()
         os.system(f"start explorer {file_path}")
     
     # 创建 Tkinter 界面
@@ -186,7 +187,7 @@ def main():
     disconnect_button = ttk.Button(ip_frame, text="断开连接", command=disconnect)
     disconnect_button.grid(column=3, row=0, padx=5, pady=5)
 
-    # 点击按钮打开保存的图片文件夹
+    # 点击按钮断开连接并打开保存的图片文件夹
     open_button = ttk.Button(ip_frame, text="打开文件夹", command=open_file)
     open_button.grid(column=4, row=0, padx=5, pady=5)
 
