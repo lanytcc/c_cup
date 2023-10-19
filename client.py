@@ -70,6 +70,9 @@ def receive_images(client, canvas, processed_canvas):
 
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
+            # 旋转180度
+            img = cv2.rotate(img, cv2.ROTATE_180)
+
             # 调整图像通道顺序为CHW
             img_chw = img.transpose(2, 0, 1)
 
