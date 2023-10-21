@@ -25,7 +25,13 @@ class Client:
 
     def receive_image(self):
         # 接收图像数据的长度和分辨率
-        info = struct.unpack('lhh', self.sock.recv(8))
+        data = self.sock.recv(8)
+        while len(data) < 8:
+            more_data = self.sock.recv(8 - len(data))
+            if not more_data:
+                raise Exception("Socket connection broken")
+            data += more_data
+        info = struct.unpack('lhh', data)
         self.sock.sendall("ok".encode('utf-8'))
         img_data_len = info[0]
         resolution = info[1], info[2]
@@ -34,8 +40,15 @@ class Client:
         while len(img_data) < img_data_len:
             to_read = img_data_len - len(img_data)
             img_data += self.sock.recv(min(to_read, 1024))
+        # 检查数据的有效性
+        if not img_data:
+            print("Received empty image data")
+            return None
         # 将图像数据解码为图像
         img = cv2.imdecode(np.frombuffer(img_data, dtype='uint8'), 1)
+        if img is None:
+            print("Failed to decode image data")
+            return None
         return img
 
     def close(self):
@@ -203,7 +216,7 @@ def main():
 
     # 创建输入 IP 地址的部分
     ip_frame=tk.Frame(root)
-    ip_frame.grid(column=0,row=0, columnspan=3)
+    ip_frame.grid(column=1,row=0, columnspan=3)
 
     # 创建输入 IP 地址的标签和输入框
     ip_label = ttk.Label(ip_frame, text="IP:")
@@ -213,72 +226,72 @@ def main():
 
     # 创建连接和断开连接按钮
     connect_button = ttk.Button(ip_frame, text="连接", command=connect)
-    connect_button.grid(column=2, row=0, padx=5, pady=5)
+    connect_button.grid(column=0, row=1, padx=5, pady=5)
     disconnect_button = ttk.Button(ip_frame, text="断开连接", command=disconnect)
-    disconnect_button.grid(column=3, row=0, padx=5, pady=5)
+    disconnect_button.grid(column=1, row=1, padx=5, pady=5)
 
     # 点击按钮断开连接并打开保存的图片文件夹
     open_button = ttk.Button(ip_frame, text="打开文件夹", command=open_file)
-    open_button.grid(column=4, row=0, padx=5, pady=5)
+    open_button.grid(column=0, row=2, padx=5, pady=5)
 
     # 点击按钮开始或停止保存图片
     global is_write
     is_write = False
     write_button = ttk.Button(ip_frame, text="开始保存", command=write)
-    write_button.grid(column=5, row=0, padx=5, pady=5)
+    write_button.grid(column=1, row=2, padx=5, pady=5)
 
     # 实时显示距离
     distance_label = ttk.Label(ip_frame, text="距离:")
-    distance_label.grid(column=6, row=0, padx=5, pady=5)
+    distance_label.grid(column=0, row=3, padx=5, pady=5)
     distance_value = ttk.Label(ip_frame, text=distance)
-    distance_value.grid(column=7, row=0, padx=5, pady=5)
+    distance_value.grid(column=1, row=3, padx=5, pady=5)
 
     # 创建显示摄像头图像的画布
     canvas = tk.Canvas(root, width=640, height=480)
-    canvas.grid(column=0, row=1, columnspan=3, padx=5, pady=5)
+    canvas.grid(column=0, row=0, columnspan=3, padx=5, pady=5)
     processed_canvas = tk.Canvas(root, width=640, height=480)
-    processed_canvas.grid(column=3, row=1, padx=5, pady=5)
+    processed_canvas.grid(column=0, row=1, padx=5, pady=5)
 
     # 创建方向按钮
     button_frame=tk.Frame(root)
-    button_frame.grid(column=0,row=2, columnspan=3) 
+    button_frame.grid(column=3,row=1, columnspan=3) 
     button_width = 10
 
     up_button = ttk.Button(button_frame, text="前进", command=lambda: send_command("up"), width=button_width)
-    up_button.grid(column=0, row=2, padx=5, pady=5)
+    up_button.grid(column=1, row=0, padx=5, pady=5)
 
     down_button = ttk.Button(button_frame, text="后退", command=lambda: send_command("down"), width=button_width)
     down_button.grid(column=1, row=2, padx=5, pady=5)
 
     left_button = ttk.Button(button_frame, text="左转", command=lambda: send_command("left"), width=button_width)
-    left_button.grid(column=2, row=2, padx=5, pady=5)
+    left_button.grid(column=0, row=1, padx=5, pady=5)
 
     right_button = ttk.Button(button_frame, text="右转", command=lambda: send_command("right"), width=button_width)
-    right_button.grid(column=3, row=2, padx=5, pady=5)
+    right_button.grid(column=2, row=1, padx=5, pady=5)
 
     stop_button = ttk.Button(button_frame, text="停下", command=lambda: send_command("escape"), width=button_width)
-    stop_button.grid(column=4, row=2, padx=5, pady=5)
+    stop_button.grid(column=1, row=1, padx=5, pady=5)
 
     accelerate_button = ttk.Button(button_frame, text="加速", command=lambda: send_command("j"), width=button_width)
-    accelerate_button.grid(column=5, row=2, padx=5, pady=5)
+    accelerate_button.grid(column=3, row=0, padx=5, pady=5)
 
     decelerate_button = ttk.Button(button_frame, text="减速", command=lambda: send_command("k"), width=button_width)
-    decelerate_button.grid(column=6, row=2, padx=5, pady=5)
+    decelerate_button.grid(column=3, row=2, padx=5, pady=5)
 
     camera_up_button = ttk.Button(button_frame, text="镜头上移", command=lambda: send_command("w"), width=button_width)
-    camera_up_button.grid(column=0, row=3, padx=5, pady=5)
+    camera_up_button.grid(column=1, row=3, padx=5, pady=5)
 
     camera_down_button = ttk.Button(button_frame, text="镜头下移", command=lambda: send_command("s"), width=button_width)
-    camera_down_button.grid(column=1, row=3, padx=5, pady=5)
+    camera_down_button.grid(column=1, row=5, padx=5, pady=5)
 
     camera_left_button = ttk.Button(button_frame, text="镜头左移", command=lambda: send_command("a"), width=button_width)
-    camera_left_button.grid(column=2, row=3, padx=5, pady=5)
+    camera_left_button.grid(column=0, row=4, padx=5, pady=5)
 
     camera_right_button = ttk.Button(button_frame, text="镜头右移", command=lambda: send_command("d"), width=button_width)
-    camera_right_button.grid(column=3, row=3, padx=5, pady=5)
+    camera_right_button.grid(column=2, row=4, padx=5, pady=5)
 
     camera_reset_button = ttk.Button(button_frame, text="镜头回中", command=lambda: send_command("f"), width=button_width)
-    camera_reset_button.grid(column=4, row=3, padx=5, pady=5)
+    camera_reset_button.grid(column=1, row=4, padx=5, pady=5)
 
     root.protocol("WM_DELETE_WINDOW", on_closing) # 关闭窗口时调用 on_closing 函数
     root.mainloop()
