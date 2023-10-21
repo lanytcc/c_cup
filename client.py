@@ -63,6 +63,7 @@ def receive_images(client, canvas, processed_canvas):
 
         while is_connect:
             img = client.receive_image()
+            img_time_dis = time.strftime("%Y%m%d%H%M%S", time.localtime()) + '-' +str(distance)
 
             # 如果不是np.array类型，就跳过
             if not isinstance(img, np.ndarray):
@@ -102,7 +103,7 @@ def receive_images(client, canvas, processed_canvas):
             
             # 图片保存到文件夹
             if is_write:
-                cv2.imwrite(os.path.join(file_path, f"{time.time()}.jpg"), processed_img)
+                cv2.imwrite(os.path.join(file_path, f"{img_time_dis}.jpg"), processed_img)
 
             processed_img = Image.fromarray(processed_img)
             processed_imgtk = ImageTk.PhotoImage(image=processed_img)
@@ -114,10 +115,11 @@ def receive_images(client, canvas, processed_canvas):
         print(f"An error occurred: {e}")
 
 def main():
-    global key_down, is_connect
+    global key_down, is_connect, distance
 
     key_down = False
     is_connect = False
+    distance = 0
 
     def on_key_press(event):
         global key_down
@@ -129,6 +131,10 @@ def main():
             key_down = True
         if key in ('up', 'down', 'left', 'right', 'escape', 'j', 'k', 'w', 's', 'a', 'd', 'f'):
             send_command(key)
+        if key == 'n':
+            write()
+        if key in ('c', 'v', 'b'):
+            change_distance(key)
 
     def connect():
         global client_control, client_camera, is_connect
@@ -178,6 +184,16 @@ def main():
             is_write = True
             write_button.config(text="停止保存")
     
+    def change_distance(command):
+        global distance
+        if command == 'c':
+            distance += 1
+        elif command == 'v':
+            distance -= 1
+        elif command == 'b':
+            distance = 0
+        distance_value.config(text=distance)
+    
     # 创建 Tkinter 界面
     root = tk.Tk()
     root.title("Remote Control")
@@ -210,6 +226,12 @@ def main():
     is_write = False
     write_button = ttk.Button(ip_frame, text="开始保存", command=write)
     write_button.grid(column=5, row=0, padx=5, pady=5)
+
+    # 实时显示距离
+    distance_label = ttk.Label(ip_frame, text="距离:")
+    distance_label.grid(column=6, row=0, padx=5, pady=5)
+    distance_value = ttk.Label(ip_frame, text=distance)
+    distance_value.grid(column=7, row=0, padx=5, pady=5)
 
     # 创建显示摄像头图像的画布
     canvas = tk.Canvas(root, width=640, height=480)
