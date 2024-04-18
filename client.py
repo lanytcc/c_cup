@@ -24,31 +24,40 @@ class Client:
         self.sock.sendall(command.encode('utf-8'))
 
     def receive_image(self):
-        # 接收图像数据的长度和分辨率
-        data = self.sock.recv(8)
-        while len(data) < 8:
-            more_data = self.sock.recv(8 - len(data))
+        # 接收图像数据的长度和分辨率信息
+        data = self.sock.recv(12)  # 确保接收足够的字节数 (8 bytes for 'q' + 2*2 bytes for 'hh')
+        while len(data) < 12:
+            more_data = self.sock.recv(12 - len(data))
             if not more_data:
                 raise Exception("Socket connection broken")
             data += more_data
-        info = struct.unpack('lhh', data)
-        self.sock.sendall("ok".encode('utf-8'))
+
+        info = struct.unpack('!qhh', data)  # 使用与发送端相同的格式
+        self.sock.sendall(b"ok")  # 发送确认信息
+
         img_data_len = info[0]
         resolution = info[1], info[2]
+
         # 接收图像数据
         img_data = b''
         while len(img_data) < img_data_len:
             to_read = img_data_len - len(img_data)
-            img_data += self.sock.recv(min(to_read, 1024))
+            chunk = self.sock.recv(min(to_read, 4096))  # 根据情况调整缓冲区大小
+            if not chunk:
+                break  # 如果没有接收到数据，则跳出循环
+            img_data += chunk
+
         # 检查数据的有效性
         if not img_data:
             print("Received empty image data")
             return None
+
         # 将图像数据解码为图像
         img = cv2.imdecode(np.frombuffer(img_data, dtype='uint8'), 1)
         if img is None:
             print("Failed to decode image data")
             return None
+
         return img
 
     def close(self):
